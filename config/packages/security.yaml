@@ -1,0 +1,38 @@
+security:
+    # https://symfony.com/doc/current/book/security.html#where-do-users-come-from-user-providers
+    providers:
+        metin2api_provider:
+            id: App\Security\UserProvider
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+        auth:
+            pattern: ^/login
+            anonymous: true
+            stateless: true
+            simple_form:
+                authenticator:            App\Security\Metin2ApiAuthenticator
+                check_path:               login
+                login_path:               login
+                success_handler:          lexik_jwt_authentication.handler.authentication_success
+                failure_handler:          lexik_jwt_authentication.handler.authentication_failure
+                require_previous_session: false
+            logout:
+                path:   /logout
+                target: /
+        api:
+            security: true
+            pattern: ^/
+            stateless: true
+            guard:
+                authenticators:
+                    - lexik_jwt_authentication.jwt_token_authenticator
+
+    encoders:
+        App\Security\User: plaintext
+
+    access_control:
+        - { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/,      roles: IS_AUTHENTICATED_FULLY }
+

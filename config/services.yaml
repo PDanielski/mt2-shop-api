@@ -1,0 +1,67 @@
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
+parameters:
+    jms_serializer.camel_case_naming_strategy.class: JMS\Serializer\Naming\IdenticalPropertyNamingStrategy
+    paypal_link: 'https://www.paypal.com/cgi-bin/webscr'
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        public: false       # Allows optimizing the container by removing unused services; this also means
+                            # fetching services directly from the container via $container->get() won't work.
+                            # The best practice is to be explicit about your dependencies anyway.
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/*'
+        exclude: '../src/{Entity,Migrations,Tests,Document}'
+
+    # controllers are imported separately to make sure services can be injected
+    # as action arguments even if you don't extend any base controller class
+    App\Controller\:
+        resource: '../src/Controller'
+        tags: ['controller.service_arguments']
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones
+
+    App\Metin2Api\ApiFactory:
+        arguments:
+            - '%env(METIN2_API_BASE_URL)%'
+            - '%env(METIN2_API_KEY)%'
+
+    App\Metin2Api\AccountApi:
+        factory: 'App\Metin2Api\ApiFactory:getAccountApi'
+
+    App\Metin2Api\AuthApi:
+        factory: 'App\Metin2Api\ApiFactory:getAuthApi'
+
+    App\Metin2Api\PlayerApi:
+        factory: 'App\Metin2Api\ApiFactory:getPlayerApi'
+
+    App\Metin2Api\ItemApi:
+        factory: 'App\Metin2Api\ApiFactory:getItemApi'
+    App\Metin2Api\ItemsApi:
+        factory: 'App\Metin2Api\ApiFactory:getItemsApi'
+
+    App\Metin2Api\PlayerListApi:
+        factory: 'App\Metin2Api\ApiFactory:getPlayerListApi'
+
+    Symfony\Bridge\Doctrine\ManagerRegistry: '@doctrine_mongodb'
+
+    app.courier.collection_metin2_item:
+        alias: 'App\Courier\CollectionMetin2ItemCourier'
+    app.courier.metin2_item:
+        alias: 'App\Courier\Metin2ItemCourier'
+    App\Courier\CourierFactory:
+        arguments:
+            - ['@app.courier.collection_metin2_item','@app.courier.metin2_item']
+
+    App\EventListener\PlayerIdCatcher:
+        tags:
+            - {name: kernel.event_listener, event: kernel.controller}
+    App\EventListener\CorsListener:
+        tags:
+          - {name: kernel.event_listener, event: kernel.request}
